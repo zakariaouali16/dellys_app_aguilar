@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "949624679161",
+    "project_id": "dellyp-app",
+    "storage_bucket": "dellyp-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:949624679161:android:1cb1c5f2d7fa25d4c7d028",
+        "android_client_info": {
+          "package_name": "com.example.dellys_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "949624679161-79aapnudk4r2030kpet9k9n9qfh20cot.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB8O8xRMdz2n-41daq2X9VzJqJlvQ4wI0c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "949624679161-79aapnudk4r2030kpet9k9n9qfh20cot.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
