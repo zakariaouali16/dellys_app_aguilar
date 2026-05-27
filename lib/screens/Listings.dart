@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../models/listing.dart';
+import '../services/listing_service.dart';
 
 class ListingsScreen extends StatefulWidget {
   const ListingsScreen({super.key});
@@ -9,39 +11,24 @@ class ListingsScreen extends StatefulWidget {
 
 class _ListingsScreenState extends State<ListingsScreen> {
   int _selectedTab = 0;
+  String _selectedCategory = 'Trending';
+  final Set<String> _favorites = {};
 
-  static const _listings = [
-    _Listing(
-      title: 'Home in Yucca Valley',
-      subtitle: 'Desert dream oasis with spa',
-      beds: '2 beds',
-      rating: '4.97',
-      reviews: '786',
-      price: '\$762',
-      isFavorite: false,
-      imageColor: Color(0xFFD4C5A9),
-    ),
-    _Listing(
-      title: 'Cabin in the Pines',
-      subtitle: 'Cozy retreat with mountain views',
-      beds: '3 beds',
-      rating: '4.89',
-      reviews: '412',
-      price: '\$540',
-      isFavorite: true,
-      imageColor: Color(0xFFA8C5A0),
-    ),
-    _Listing(
-      title: 'Beachfront Villa',
-      subtitle: 'Private pool and ocean access',
-      beds: '4 beds',
-      rating: '4.95',
-      reviews: '1,023',
-      price: '\$1,240',
-      isFavorite: false,
-      imageColor: Color(0xFF9EC4D4),
-    ),
+  static const _categories = [
+    'Trending',
+    'Cabins',
+    'Beach',
+    'Pools',
+    'Amazing views',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    ListingService.getFavorites().listen((favs) {
+      if (mounted) setState(() => _favorites..clear()..addAll(favs));
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -53,17 +40,90 @@ class _ListingsScreenState extends State<ListingsScreen> {
             _buildSearchBar(),
             _buildFilterChips(),
             Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                itemCount: _listings.length,
-                itemBuilder: (context, index) =>
-                    _ListingCard(listing: _listings[index]),
+              child: StreamBuilder<List<Listing>>(
+                stream: ListingService.getListings(
+                  category: _selectedCategory,
+                ),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFFFF385C),
+                      ),
+                    );
+                  }
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Text(
+                        'Something went wrong.\n${snapshot.error}',
+                        textAlign: TextAlign.center,
+                        style:
+                            TextStyle(color: Colors.grey[600], fontSize: 14),
+                      ),
+                    );
+                  }
+                  final listings = snapshot.data ?? [];
+                  if (listings.isEmpty) return _buildEmptyState();
+                  return ListView.builder(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 8),
+                    itemCount: listings.length,
+                    itemBuilder: (context, index) {
+                      final listing = listings[index];
+                      return _ListingCard(
+                        listing: listing,
+                        isFavorite: _favorites.contains(listing.id),
+                        onFavoriteToggled: (add) async {
+                          setState(() {
+                            if (add) {
+                              _favorites.add(listing.id);
+                            } else {
+                              _favorites.remove(listing.id);
+                            }
+                          });
+                          await ListingService.toggleFavorite(listing.id, add);
+                        },
+                      );
+                    },
+                  );
+                },
               ),
             ),
           ],
         ),
       ),
       bottomNavigationBar: _buildBottomNav(),
+      // TEMPORARY: remove after seeding data once
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: const Color(0xFFFF385C),
+        icon: const Icon(Icons.cloud_upload_outlined, color: Colors.white),
+        label: const Text('Seed Data', style: TextStyle(color: Colors.white)),
+        onPressed: () async {
+          final messenger = ScaffoldMessenger.of(context);
+          await ListingService.seedSampleListings();
+          messenger.showSnackBar(
+            const SnackBar(
+              content: Text('Sample listings added to Firestore!'),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.home_outlined, size: 64, color: Colors.grey[300]),
+          const SizedBox(height: 12),
+          Text(
+            'No listings in this category yet',
+            style: TextStyle(fontSize: 15, color: Colors.grey[500]),
+          ),
+        ],
+      ),
     );
   }
 
@@ -114,7 +174,8 @@ class _ListingsScreenState extends State<ListingsScreen> {
                 border: Border.all(color: Colors.grey.shade300),
                 borderRadius: BorderRadius.circular(24),
               ),
-              child: const Icon(Icons.tune, size: 16, color: Color(0xFF222222)),
+              child:
+                  const Icon(Icons.tune, size: 16, color: Color(0xFF222222)),
             ),
           ],
         ),
@@ -123,23 +184,37 @@ class _ListingsScreenState extends State<ListingsScreen> {
   }
 
   Widget _buildFilterChips() {
-    const filters = ['Trending', 'Cabins', 'Beach', 'Pools', 'Amazing views'];
     return SizedBox(
       height: 40,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 20),
-        itemCount: filters.length,
+        itemCount: _categories.length,
         separatorBuilder: (_, _) => const SizedBox(width: 8),
-        itemBuilder: (context, index) => Chip(
-          label: Text(
-            filters[index],
-            style: const TextStyle(fontSize: 12, color: Color(0xFF222222)),
-          ),
-          backgroundColor: Colors.white,
-          side: BorderSide(color: Colors.grey.shade300),
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-        ),
+        itemBuilder: (context, index) {
+          final cat = _categories[index];
+          final selected = cat == _selectedCategory;
+          return GestureDetector(
+            onTap: () => setState(() => _selectedCategory = cat),
+            child: Chip(
+              label: Text(
+                cat,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: selected ? Colors.white : const Color(0xFF222222),
+                  fontWeight:
+                      selected ? FontWeight.w600 : FontWeight.normal,
+                ),
+              ),
+              backgroundColor:
+                  selected ? const Color(0xFF222222) : Colors.white,
+              side: BorderSide(
+                color: selected ? const Color(0xFF222222) : Colors.grey.shade300,
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+            ),
+          );
+        },
       ),
     );
   }
@@ -168,22 +243,26 @@ class _ListingsScreenState extends State<ListingsScreen> {
   }
 }
 
-class _ListingCard extends StatefulWidget {
-  final _Listing listing;
-  const _ListingCard({required this.listing});
+class _ListingCard extends StatelessWidget {
+  final Listing listing;
+  final bool isFavorite;
+  final ValueChanged<bool> onFavoriteToggled;
 
-  @override
-  State<_ListingCard> createState() => _ListingCardState();
-}
+  const _ListingCard({
+    required this.listing,
+    required this.isFavorite,
+    required this.onFavoriteToggled,
+  });
 
-class _ListingCardState extends State<_ListingCard> {
-  late bool _isFavorite;
+  static const _placeholderColors = [
+    Color(0xFFD4C5A9),
+    Color(0xFFA8C5A0),
+    Color(0xFF9EC4D4),
+    Color(0xFFD4A8C5),
+  ];
 
-  @override
-  void initState() {
-    super.initState();
-    _isFavorite = widget.listing.isFavorite;
-  }
+  Color get _placeholderColor =>
+      _placeholderColors[listing.id.hashCode.abs() % _placeholderColors.length];
 
   @override
   Widget build(BuildContext context) {
@@ -196,51 +275,59 @@ class _ListingCardState extends State<_ListingCard> {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  height: 280,
-                  color: widget.listing.imageColor,
-                  child: Center(
-                    child: Icon(
-                      Icons.home_outlined,
-                      size: 80,
-                      color: Colors.white.withValues(alpha: 0.5),
+                child: listing.images.isNotEmpty
+                    ? Image.network(
+                        listing.images.first,
+                        height: 280,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      )
+                    : Container(
+                        height: 280,
+                        color: _placeholderColor,
+                        child: Center(
+                          child: Icon(
+                            Icons.home_outlined,
+                            size: 80,
+                            color: Colors.white.withValues(alpha: 0.5),
+                          ),
+                        ),
+                      ),
+              ),
+              if (listing.isGuestFavorite)
+                Positioned(
+                  top: 12,
+                  left: 12,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      'Guest favorite',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF222222),
+                      ),
                     ),
                   ),
                 ),
-              ),
-              Positioned(
-                top: 12,
-                left: 12,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Text(
-                    'Guest favorite',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF222222),
-                    ),
-                  ),
-                ),
-              ),
               Positioned(
                 top: 12,
                 right: 12,
                 child: GestureDetector(
-                  onTap: () => setState(() => _isFavorite = !_isFavorite),
+                  onTap: () => onFavoriteToggled(!isFavorite),
                   child: Icon(
-                    _isFavorite ? Icons.favorite : Icons.favorite_border,
-                    color: _isFavorite
+                    isFavorite ? Icons.favorite : Icons.favorite_border,
+                    color: isFavorite
                         ? const Color(0xFFFF385C)
                         : Colors.white,
                     size: 26,
                     shadows: const [
-                      Shadow(color: Colors.black38, blurRadius: 4)
+                      Shadow(color: Colors.black38, blurRadius: 4),
                     ],
                   ),
                 ),
@@ -251,12 +338,15 @@ class _ListingCardState extends State<_ListingCard> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                widget.listing.title,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF222222),
+              Expanded(
+                child: Text(
+                  listing.title,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF222222),
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               Row(
@@ -264,7 +354,7 @@ class _ListingCardState extends State<_ListingCard> {
                   const Icon(Icons.star, size: 13, color: Color(0xFF222222)),
                   const SizedBox(width: 2),
                   Text(
-                    '${widget.listing.rating} (${widget.listing.reviews})',
+                    '${listing.rating.toStringAsFixed(2)} (${listing.reviewCount})',
                     style: const TextStyle(
                         fontSize: 13, color: Color(0xFF222222)),
                   ),
@@ -274,11 +364,11 @@ class _ListingCardState extends State<_ListingCard> {
           ),
           const SizedBox(height: 2),
           Text(
-            widget.listing.subtitle,
+            listing.subtitle,
             style: TextStyle(fontSize: 13, color: Colors.grey[600]),
           ),
           Text(
-            widget.listing.beds,
+            listing.bedsLabel,
             style: TextStyle(fontSize: 13, color: Colors.grey[600]),
           ),
           const SizedBox(height: 4),
@@ -286,7 +376,7 @@ class _ListingCardState extends State<_ListingCard> {
             TextSpan(
               children: [
                 TextSpan(
-                  text: '${widget.listing.price} ',
+                  text: '${listing.formattedPrice} ',
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -295,7 +385,8 @@ class _ListingCardState extends State<_ListingCard> {
                 ),
                 const TextSpan(
                   text: 'total before taxes',
-                  style: TextStyle(fontSize: 13, color: Color(0xFF222222)),
+                  style:
+                      TextStyle(fontSize: 13, color: Color(0xFF222222)),
                 ),
               ],
             ),
@@ -304,26 +395,4 @@ class _ListingCardState extends State<_ListingCard> {
       ),
     );
   }
-}
-
-class _Listing {
-  final String title;
-  final String subtitle;
-  final String beds;
-  final String rating;
-  final String reviews;
-  final String price;
-  final bool isFavorite;
-  final Color imageColor;
-
-  const _Listing({
-    required this.title,
-    required this.subtitle,
-    required this.beds,
-    required this.rating,
-    required this.reviews,
-    required this.price,
-    required this.isFavorite,
-    required this.imageColor,
-  });
 }

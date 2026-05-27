@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'Listings.dart';
@@ -18,10 +19,22 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   Future<void> _signInWithGoogle() async {
     setState(() => _googleLoading = true);
     try {
-      final account = await _googleSignIn.signIn();
-      if (account != null && mounted) {
+      final googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) return;
+
+      final googleAuth = await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      final userCredential =
+          await FirebaseAuth.instance.signInWithCredential(credential);
+      final user = userCredential.user;
+
+      if (user != null && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Signed in as ${account.displayName}')),
+          SnackBar(content: Text('Signed in as ${user.displayName}')),
         );
         Navigator.pushReplacement(
           context,
