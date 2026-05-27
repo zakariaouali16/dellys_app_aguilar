@@ -1,0 +1,8 @@
+Variant: debugAndroidTest
+Config: debug
+Store: C:\Users\zouali1\.android\debug.keystore
+Alias: AndroidDebugKey
+MD5: 08:5F:82:5A:18:ED:59:D5:A3:BE:8C:66:13:0D:70:22
+SHA1: 46:0E:97:0F:40:82:8E:BA:2A:44:FE:A8:BB:20:7C:34:F3:70:D8:87
+SHA-256: 3A:79:F5:C8:68:D7:F3:9A:7F:68:42:F6:CD:6B:48:61:C6:A6:20:0E:FB:CB:91:68:8D:E1:CD:80:D1:37:E7:4E
+Valid until: Thursday, May 18, 2056

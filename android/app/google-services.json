@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "949624679161-qn1v1j1a5p9ap3b0946ne1v46ae08oqq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.dellys_app",
+            "certificate_hash": "460e970f40828eba2a44fea8bb207c34f370d887"
+          }
+        },
+        {
           "client_id": "949624679161-79aapnudk4r2030kpet9k9n9qfh20cot.apps.googleusercontent.com",
           "client_type": 3
         }
