@@ -35,62 +35,7 @@ class _ListingsScreenState extends State<ListingsScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Column(
-          children: [
-            _buildSearchBar(),
-            _buildFilterChips(),
-            Expanded(
-              child: StreamBuilder<List<Listing>>(
-                stream: ListingService.getListings(
-                  category: _selectedCategory,
-                ),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(
-                      child: CircularProgressIndicator(
-                        color: Color(0xFFFF385C),
-                      ),
-                    );
-                  }
-                  if (snapshot.hasError) {
-                    return Center(
-                      child: Text(
-                        'Something went wrong.\n${snapshot.error}',
-                        textAlign: TextAlign.center,
-                        style:
-                            TextStyle(color: Colors.grey[600], fontSize: 14),
-                      ),
-                    );
-                  }
-                  final listings = snapshot.data ?? [];
-                  if (listings.isEmpty) return _buildEmptyState();
-                  return ListView.builder(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 8),
-                    itemCount: listings.length,
-                    itemBuilder: (context, index) {
-                      final listing = listings[index];
-                      return _ListingCard(
-                        listing: listing,
-                        isFavorite: _favorites.contains(listing.id),
-                        onFavoriteToggled: (add) async {
-                          setState(() {
-                            if (add) {
-                              _favorites.add(listing.id);
-                            } else {
-                              _favorites.remove(listing.id);
-                            }
-                          });
-                          await ListingService.toggleFavorite(listing.id, add);
-                        },
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
+        child: _selectedTab == 1 ? _buildWishlistsTab() : _buildExploreTab(),
       ),
       bottomNavigationBar: _buildBottomNav(),
       // TEMPORARY: remove after seeding data once
@@ -108,6 +53,131 @@ class _ListingsScreenState extends State<ListingsScreen> {
           );
         },
       ),
+    );
+  }
+
+  Widget _buildExploreTab() {
+    return Column(
+      children: [
+        _buildSearchBar(),
+        _buildFilterChips(),
+        Expanded(
+          child: StreamBuilder<List<Listing>>(
+            stream: ListingService.getListings(category: _selectedCategory),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  child: CircularProgressIndicator(color: Color(0xFFFF385C)),
+                );
+              }
+              if (snapshot.hasError) {
+                return Center(
+                  child: Text(
+                    'Something went wrong.\n${snapshot.error}',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                  ),
+                );
+              }
+              final listings = snapshot.data ?? [];
+              if (listings.isEmpty) return _buildEmptyState();
+              return ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                itemCount: listings.length,
+                itemBuilder: (context, index) {
+                  final listing = listings[index];
+                  return _ListingCard(
+                    listing: listing,
+                    isFavorite: _favorites.contains(listing.id),
+                    onFavoriteToggled: (add) async {
+                      setState(() {
+                        if (add) {
+                          _favorites.add(listing.id);
+                        } else {
+                          _favorites.remove(listing.id);
+                        }
+                      });
+                      await ListingService.toggleFavorite(listing.id, add);
+                    },
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWishlistsTab() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.fromLTRB(20, 16, 20, 16),
+          child: Text(
+            'Wishlists',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF222222),
+            ),
+          ),
+        ),
+        Expanded(
+          child: _favorites.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.favorite_border, size: 64, color: Colors.grey[300]),
+                      const SizedBox(height: 12),
+                      Text(
+                        'No saved listings yet',
+                        style: TextStyle(fontSize: 15, color: Colors.grey[500]),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Tap the heart on any listing to save it here',
+                        style: TextStyle(fontSize: 13, color: Colors.grey[400]),
+                      ),
+                    ],
+                  ),
+                )
+              : StreamBuilder<List<Listing>>(
+                  stream: ListingService.getFavoriteListings(_favorites.toList()),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(
+                        child: CircularProgressIndicator(color: Color(0xFFFF385C)),
+                      );
+                    }
+                    final listings = snapshot.data ?? [];
+                    return ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                      itemCount: listings.length,
+                      itemBuilder: (context, index) {
+                        final listing = listings[index];
+                        return _ListingCard(
+                          listing: listing,
+                          isFavorite: true,
+                          onFavoriteToggled: (add) async {
+                            setState(() {
+                              if (add) {
+                                _favorites.add(listing.id);
+                              } else {
+                                _favorites.remove(listing.id);
+                              }
+                            });
+                            await ListingService.toggleFavorite(listing.id, add);
+                          },
+                        );
+                      },
+                    );
+                  },
+                ),
+        ),
+      ],
     );
   }
 

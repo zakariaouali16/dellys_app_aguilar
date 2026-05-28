@@ -20,6 +20,15 @@ class ListingService {
     );
   }
 
+  static Stream<List<Listing>> getFavoriteListings(List<String> ids) {
+    if (ids.isEmpty) return Stream.value([]);
+    return _db
+        .collection('listings')
+        .where(FieldPath.documentId, whereIn: ids)
+        .snapshots()
+        .map((snap) => snap.docs.map(Listing.fromFirestore).toList());
+  }
+
   static Stream<List<String>> getFavorites() {
     final uid = _auth.currentUser?.uid;
     if (uid == null) return Stream.value([]);
