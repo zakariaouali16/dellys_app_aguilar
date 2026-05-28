@@ -1,6 +1,8 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'firebase_options.dart';
+import 'providers/currency_provider.dart';
 import 'screens/welcome_screen.dart';
 
 void main() async {
@@ -14,14 +16,17 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Dellys Rent',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFFF385C)),
-        fontFamily: 'Roboto',
+    return ChangeNotifierProvider(
+      create: (_) => CurrencyProvider(),
+      child: MaterialApp(
+        title: 'Dellys Rent',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFFF385C)),
+          fontFamily: 'Roboto',
+        ),
+        home: const WelcomeScreen(),
       ),
-      home: const WelcomeScreen(),
     );
   }
 }

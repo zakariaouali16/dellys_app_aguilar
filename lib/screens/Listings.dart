@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/listing.dart';
+import '../providers/currency_provider.dart';
 import '../services/listing_service.dart';
+import 'profile_screen.dart';
 
 class ListingsScreen extends StatefulWidget {
   const ListingsScreen({super.key});
@@ -35,7 +38,11 @@ class _ListingsScreenState extends State<ListingsScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: _selectedTab == 1 ? _buildWishlistsTab() : _buildExploreTab(),
+        child: switch (_selectedTab) {
+          1 => _buildWishlistsTab(),
+          4 => const ProfileScreen(),
+          _ => _buildExploreTab(),
+        },
       ),
       bottomNavigationBar: _buildBottomNav(),
       // TEMPORARY: remove after seeding data once
@@ -336,6 +343,7 @@ class _ListingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final currency = context.watch<CurrencyProvider>();
     return Padding(
       padding: const EdgeInsets.only(bottom: 24),
       child: Column(
@@ -446,7 +454,7 @@ class _ListingCard extends StatelessWidget {
             TextSpan(
               children: [
                 TextSpan(
-                  text: '${listing.formattedPrice} ',
+                  text: '${currency.formatPrice(listing.pricePerNight)} ',
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
