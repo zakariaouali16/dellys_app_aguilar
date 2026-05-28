@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../models/listing.dart';
 import '../providers/currency_provider.dart';
 import '../services/listing_service.dart';
+import 'listing_detail_screen.dart';
 import 'profile_screen.dart';
 
 class ListingsScreen extends StatefulWidget {
@@ -96,6 +97,24 @@ class _ListingsScreenState extends State<ListingsScreen> {
                   return _ListingCard(
                     listing: listing,
                     isFavorite: _favorites.contains(listing.id),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => ListingDetailScreen(
+                          listing: listing,
+                          isFavorite: _favorites.contains(listing.id),
+                          onFavoriteToggled: (add) async {
+                            setState(() {
+                              if (add) {
+                                _favorites.add(listing.id);
+                              } else {
+                                _favorites.remove(listing.id);
+                              }
+                            });
+                            await ListingService.toggleFavorite(listing.id, add);
+                          },
+                        ),
+                      ),
+                    ),
                     onFavoriteToggled: (add) async {
                       setState(() {
                         if (add) {
@@ -168,6 +187,24 @@ class _ListingsScreenState extends State<ListingsScreen> {
                         return _ListingCard(
                           listing: listing,
                           isFavorite: true,
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => ListingDetailScreen(
+                                listing: listing,
+                                isFavorite: true,
+                                onFavoriteToggled: (add) async {
+                                  setState(() {
+                                    if (add) {
+                                      _favorites.add(listing.id);
+                                    } else {
+                                      _favorites.remove(listing.id);
+                                    }
+                                  });
+                                  await ListingService.toggleFavorite(listing.id, add);
+                                },
+                              ),
+                            ),
+                          ),
                           onFavoriteToggled: (add) async {
                             setState(() {
                               if (add) {
@@ -323,11 +360,13 @@ class _ListingsScreenState extends State<ListingsScreen> {
 class _ListingCard extends StatelessWidget {
   final Listing listing;
   final bool isFavorite;
+  final VoidCallback? onTap;
   final ValueChanged<bool> onFavoriteToggled;
 
   const _ListingCard({
     required this.listing,
     required this.isFavorite,
+    this.onTap,
     required this.onFavoriteToggled,
   });
 
@@ -344,7 +383,9 @@ class _ListingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final currency = context.watch<CurrencyProvider>();
-    return Padding(
+    return GestureDetector(
+      onTap: onTap,
+      child: Padding(
       padding: const EdgeInsets.only(bottom: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -470,6 +511,7 @@ class _ListingCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }
